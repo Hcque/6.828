@@ -8,16 +8,16 @@ int
 main(int argc, char *argv[])
 {
     
-    int newArgc = 0;
-    char *buf[MAXLINE], *p;
-    char one[32];
-    // p = one;
+    char buf[MAXLINE];
+    char* one = (char*) malloc(32);
     char *params[MAXARG];
     int argInd = 0;
     char* cmd = argv[1];
     for (int i = 1; i < argc; ++i) params[argInd++] = argv[i];
-    // fprintf(2, "%s\n", argv[0]);
+
+
     int k = 0;
+    int oneInd = 0;
     while ( 1 ) {
         int n = read(0, buf, MAXLINE);
         if (n == 0)
@@ -25,43 +25,44 @@ main(int argc, char *argv[])
         // fprintf(2, "%d", n);
         // fprintf(2, "%s\n", p);
         for (int i = 0; i < n; ++i) {
+            if (buf[i] == ' ' || buf[i] == '\n') {
+            params[argInd++] = one;
+            // fprintf(2, "%s\n", one);
+            one = (char*) malloc(32);
+            oneInd = 0;
 
-        }
-        if (buf[i] == " " || buf[i] == "\n") {
-            buf[newArgc++] = one;
-            fprintf(2, "%s\n", one);
-            char one[32];
-            // p = one;
         }
         else {
-            one[k] = *p;
-
+            one[oneInd++] = buf[i];
         }
+        }
+        
         k++;
     }
 
-    for (int i = 0; i < newArgc; ++i) {
-        fprintf(2, "%s  ", buf[i]);
-    }
+    // for (int i = 0; i < k + argc-1; ++i) {
+    //     fprintf(2, "%s  ", params[i]);
+    // }
 
 
-    char *newAgrv[MAXARG], **pp;
-    pp = newAgrv;
-    int originSize = sizeof(char)*argc;
-    memcpy(newAgrv, argv, originSize);
-    memcpy(pp + originSize , buf, sizeof(char*)*newArgc);
-    *pp++ = 0;
+    // char *newAgrv[MAXARG], **pp;
+    // pp = newAgrv;
+    // int originSize = sizeof(char)*argc;
+    // memcpy(newAgrv, argv, originSize);
+    // memcpy(pp + originSize , buf, sizeof(char*)*newArgc);
+    // *pp++ = 0;
 
 
-    for (int i = 0; i < newArgc; ++i) {
-        fprintf(2, "%s  ", newAgrv[i]);
-    }
+    // for (int i = 0; i < newArgc; ++i) {
+    //     fprintf(2, "%s  ", newAgrv[i]);
+    // }
 
     if (fork() == 0) {
-        exec(cmd, newAgrv);
+        exec(cmd, params);
         exit(0);
     }
     else {
+        wait((int*)0);
         exit(0);
 
     }
