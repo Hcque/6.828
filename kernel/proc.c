@@ -253,6 +253,19 @@ growproc(int n)
   return 0;
 }
 
+// for lab 2
+int 
+getUsedProcess() 
+{
+  struct proc *p;
+  int count = 0;
+  for (p = proc; p < &proc[NPROC]; p++) {
+    if (p->state != UNUSED)
+      count++;
+  }
+  return count;
+}
+
 // Create a new process, copying the parent.
 // Sets up child kernel stack to return as if from fork() system call.
 int
@@ -288,6 +301,9 @@ fork(void)
     if(p->ofile[i])
       np->ofile[i] = filedup(p->ofile[i]);
   np->cwd = idup(p->cwd);
+
+  // copy mask to child
+  np->mask = p->mask;
 
   safestrcpy(np->name, p->name, sizeof(p->name));
 

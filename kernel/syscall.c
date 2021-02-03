@@ -132,12 +132,18 @@ static uint64 (*syscalls[])(void) = {
 void
 syscall(void)
 {
-  int num;
+  int num, mask;
   struct proc *p = myproc();
 
   num = p->trapframe->a7;
+  mask = p->mask;
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
     p->trapframe->a0 = syscalls[num]();
+
+    if ( (mask >> num) & 0x1 ) {
+      printf("%d: syscall %s -> 5d\n", p->pid, p->name, p->trapframe->a0);
+    }
+
   } else {
     printf("%d %s: unknown sys call %d\n",
             p->pid, p->name, num);
