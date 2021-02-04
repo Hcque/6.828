@@ -100,18 +100,29 @@ sys_uptime(void)
 uint64
 sys_trace(void)
 {
-  return 1;
-  // return trace();
+  int m;
+  if (argint(0, &m) != 0) {
+    return -1;
+  }
+  myproc()->mask = m;
+  return 0;
 }
 
-int
-sysinfo(void)
+uint64
+sys_sysinfotest(void)
 {
-  // struct sysinfo *s;
 
-  // if ()
+  struct sysinfo s;
+  uint64 addr;
+  if (argaddr(0, &addr)) {
+    return -1;
+  };
+  s.nproc = getUsedProcess();
+  s.freemem = freeMem();
 
-  // if (copyout())
-  return 1;
-  // return trace();
+  if (copyout(myproc()->pagetable, addr, (char*)&s, sizeof(s)) < 0) 
+    return -1;
+  return 0;
+
+
 }
