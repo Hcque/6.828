@@ -45,12 +45,12 @@ findHelper(char *path)
     
     // fprintf(2, "========");
     // fprintf(2, "%d %s\n", st.type, fmtname(path));
-        int k = strcmp(target, fmtname(path));
-
+        int k = strcmp(fmtname(path), target);
+        fprintf(2, "k: %d%s\n", k, fmtname(path));
     switch(st.type){
         case T_FILE:
-        fprintf(2, "k: %d %s\n", k, fmtname(path));
-            if (k == 0) {
+        // fprintf(2, "k: %d %s\n", k, fmtname(path));
+            if (k == 32) {
                 printf("%s\n", path);
             }
             close(fd);
@@ -90,7 +90,6 @@ main(int argc, char *argv[])
         fprintf(2, "should be three argements\n");
     }
     target = argv[2];
-    fprintf(2, "target: %s\n", target);
     findHelper(argv[1]);
     exit(0);
 }
