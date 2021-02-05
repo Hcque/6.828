@@ -7,65 +7,42 @@
 int 
 main(int argc, char *argv[])
 {
-    
-    char buf[MAXLINE];
-    char* one = (char*) malloc(32);
-    char *params[MAXARG];
-    int argInd = 0;
-    char* cmd = argv[1];
-    for (int i = 1; i < argc; ++i) params[argInd++] = argv[i];
-
-
-    int k = 0;
-    int oneInd = 0;
-    while ( 1 ) {
-        int n = read(0, buf, MAXLINE);
-        if (n == 0)
-            break;
-        // fprintf(2, "%d", n);
-        // fprintf(2, "%s\n", p);
-        for (int i = 0; i < n; ++i) {
-            if (buf[i] == ' ' || buf[i] == '\n') {
-            params[argInd++] = one;
-            // fprintf(2, "%s\n", one);
-            one = (char*) malloc(32);
-            oneInd = 0;
-
+    int inputArgc = 0;
+    char *newArgv[MAXLINE];
+    char elem[MAXLINE], *p;
+    p = elem;
+    char buf;
+    while (read(0, &buf, 1))
+    {
+        if (buf != ' ' || buf != '\0') {
+            *p = buf;
+            p++; 
         }
         else {
-            one[oneInd++] = buf[i];
+            *p = '\0'; // terminates the string
+            char elem[MAXLINE], *p;
+            p = elem;
+
+            fprintf(2, "%s\n", elem);
+            newArgv[inputArgc++] = elem;
         }
-        }
-        
-        k++;
+    }
+    *p = ' ';
+    
+
+    if (argc < 2) {
+        fprintf(2, "too few args\n");
+    }
+    fprintf(2, "argv[1]:%s\n", argv[1]);
+
+    char *new[MAXLINE];
+    if (memcpy(new, &argv[1], sizeof(char*)*(argc-1)) <= 0) {
+        fprintf(2, "move failed for argv\n");
+    }
+    if (memcpy(new, newArgv, sizeof(char*)*(inputArgc)) <= 0) {
+        fprintf(2, "move failed for argv\n");
     }
 
-    // for (int i = 0; i < k + argc-1; ++i) {
-    //     fprintf(2, "%s  ", params[i]);
-    // }
-
-
-    // char *newAgrv[MAXARG], **pp;
-    // pp = newAgrv;
-    // int originSize = sizeof(char)*argc;
-    // memcpy(newAgrv, argv, originSize);
-    // memcpy(pp + originSize , buf, sizeof(char*)*newArgc);
-    // *pp++ = 0;
-
-
-    // for (int i = 0; i < newArgc; ++i) {
-    //     fprintf(2, "%s  ", newAgrv[i]);
-    // }
-
-    if (fork() == 0) {
-        exec(cmd, params);
-        exit(0);
-    }
-    else {
-        wait((int*)0);
-        exit(0);
-
-    }
-
+    return 0;
 
 }
