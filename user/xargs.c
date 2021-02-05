@@ -7,27 +7,31 @@
 int 
 main(int argc, char *argv[])
 {
+
     int inputArgc = 0;
     char *newArgv[MAXLINE];
-    char elem[MAXLINE], *p;
-    p = elem;
-    char buf;
+            fprintf(2, "%s\n", "df");
+
+    char *elem = (char*) malloc(MAXLINE);
+    int elemInd = 0;
+    char buf = '0';
+            fprintf(2, "%s\n", buf);
+
     while (read(0, &buf, 1))
     {
+        fprintf(2, "%s\n", buf);
         if (buf != ' ' || buf != '\0') {
-            *p = buf;
-            p++; 
+            elem[elemInd++] = buf;
         }
         else {
-            *p = '\0'; // terminates the string
-            char elem[MAXLINE], *p;
-            p = elem;
+            elem[elemInd++] = '\0'; // terminates the string
+            char elem[MAXLINE];
+            elemInd = 0;
 
             fprintf(2, "%s\n", elem);
             newArgv[inputArgc++] = elem;
         }
     }
-    *p = ' ';
     
 
     if (argc < 2) {
@@ -39,8 +43,12 @@ main(int argc, char *argv[])
     if (memcpy(new, &argv[1], sizeof(char*)*(argc-1)) <= 0) {
         fprintf(2, "move failed for argv\n");
     }
-    if (memcpy(new, newArgv, sizeof(char*)*(inputArgc)) <= 0) {
+    char **mid = new + sizeof(char*)*(argc-1);
+    if (memcpy(mid, newArgv, sizeof(char*)*(inputArgc)) <= 0) {
         fprintf(2, "move failed for argv\n");
+    }
+    for (int i = 0; i < inputArgc + argc-1; i++) {
+        fprintf(2, "%s\n", new[i]);
     }
 
     return 0;
