@@ -109,7 +109,7 @@ sys_trace(void)
 }
 
 uint64
-sys_sysinfotest(void)
+sys_sysinfo(void)
 {
 
   struct sysinfo s;

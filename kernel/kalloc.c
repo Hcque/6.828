@@ -68,7 +68,7 @@ freeMem(void)
 {
   int i = 0;
   struct run *r = kmem.freelist;
-  while (r->next) 
+  while (r) 
   {
     r = r->next;
     i++;
