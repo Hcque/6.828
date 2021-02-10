@@ -55,6 +55,8 @@ sys_sbrk(void)
 uint64
 sys_sleep(void)
 {
+  backtrace();
+
   int n;
   uint ticks0;
 
@@ -95,3 +97,30 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+// for lab trap alarm, invoke interrupt.
+uint64
+sys_sigalarm(void)
+{
+  struct proc *p = myproc();
+  uint64 handler;
+  int n;
+  
+  if (argaddr(1, &handler) < 0) 
+    return -1;
+
+  if (argint(0, &n) < 0) 
+    return -1;
+  
+  p->handler = (void())(*handler);
+  p->interval = n;
+
+  return 0;
+}
+
+uint64
+sys_sigreturn(void)
+{
+  return 0;
+}
+

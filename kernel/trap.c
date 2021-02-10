@@ -77,8 +77,14 @@ usertrap(void)
     exit(-1);
 
   // give up the CPU if this is a timer interrupt.
-  if(which_dev == 2)
+  if(which_dev == 2) {
+    p->tickpassed++; // for lab
     yield();
+  }
+  // test timepassed
+  if (p->tickpassed == p->interval) 
+    p->handler();
+  p->tickpassed = 0;
 
   usertrapret();
 }
