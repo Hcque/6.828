@@ -29,6 +29,28 @@ trapinithart(void)
   w_stvec((uint64)kernelvec);
 }
 
+int
+cowfault(pagetable_t pagetable, uint64 va) 
+{
+  if (va > MAXVA)
+    panic("cowfault panic");
+  
+  pte_t *pte = walk(pagetable, va, 0);
+  if ((*pte & PTE_U) == 0 || (*pte & PTE_V) == 0) 
+    return -1;
+  
+  uint64 pa1 = PTE2PA(*pte);
+  uint64 pa2 = (uint64) kalloc();
+
+  memmove((void*)pa2, (void*)pa1, 4096);
+
+  *pte = PA2PTE(pa2) | PTE_V | PTE_U | PTE_W | PTE_R;
+  return 0;
+  
+  
+
+}
+
 //
 // handle an interrupt, exception, or system call from user space.
 // called from trampoline.S
@@ -49,6 +71,8 @@ usertrap(void)
   
   // save user program counter.
   p->trapframe->epc = r_sepc();
+
+  // printf("scause: %d\n", r_scause());
   
   if(r_scause() == 8){
     // system call
@@ -67,7 +91,53 @@ usertrap(void)
     syscall();
   } else if((which_dev = devintr()) != 0){
     // ok
-  } else {
+  } 
+
+  // deal with store pagefault, assume 14
+  else if (r_scause() == 0xf) {
+    if (cowfault(p->pagetable, r_stval()) < 0) 
+      p->killed = 1;
+
+    // uint64 va = r_stval();
+    // PTE2PA(va);
+    // pagetable_t pagetable = p->pagetable;
+    // pte_t *pte;
+    // for (int lev = 2; lev >= 0; lev--) {
+    //   pte = pagetable[PX(lev, va)]; // todo
+    //   if (*pte & PTE_V) {
+    //     uint64 *newpage = (uint64*)kalloc();
+    //     // pteref[newpage/PGSIZE] += 1;
+
+    //     // copy and set write bit
+    //     for (int i = 0; i < 512; i++) {
+    //       newpage[i] = pte[i] & PTE_W;
+    //     }
+    //   }
+
+  }
+  
+  // handle page faults for lab 5
+  else if (r_scause() == 13 || r_scause() == 15) {
+    uint64 va = r_stval();
+
+    // check the va 
+    if (va < 3 || va > p->sz) {
+      p->killed = 1;
+    }
+    uint64 a = PGROUNDDOWN(va);
+    char *mem = kalloc();
+    if(mem == 0){
+      p->killed = 1;
+    }
+    memset(mem, 0, PGSIZE);
+    if(mappages(p->pagetable, a, PGSIZE, (uint64)mem, PTE_W|PTE_X|PTE_R|PTE_U) != 0){
+      p->killed = 1;
+    }
+
+
+  }
+
+  else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
     p->killed = 1;
