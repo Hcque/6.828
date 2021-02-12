@@ -31,15 +31,15 @@ procinit(void)
   for(p = proc; p < &proc[NPROC]; p++) {
       initlock(&p->lock, "proc");
 
-      // Allocate a page for the process's kernel stack.
-      // Map it high in memory, followed by an invalid
-      // guard page.
-      char *pa = kalloc();
-      if(pa == 0)
-        panic("kalloc");
-      uint64 va = KSTACK((int) (p - proc));
-      kvmmap(va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
-      p->kstack = va;
+      // // Allocate a page for the process's kernel stack.
+      // // Map it high in memory, followed by an invalid
+      // // guard page.
+      // char *pa = kalloc();
+      // if(pa == 0)
+      //   panic("kalloc");
+      // uint64 va = KSTACK((int) (p - proc));
+      // kvmmap(va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
+      // p->kstack = va;
   }
   kvminithart();
 }
@@ -85,6 +85,44 @@ allocpid() {
   return pid;
 }
 
+
+// initialize each process's kernel pagetable
+pagetable_t
+kvminiteach()
+{
+  pagetable_t kernel_pagetable = (pagetable_t) kalloc();
+  memset(kernel_pagetable, 0, PGSIZE);
+
+  // uart registers
+  mappages(kernel_pagetable, UART0, PGSIZE, UART0, PTE_R | PTE_W);
+  // virtio mmio disk interface
+  if(mappages(kernel_pagetable, VIRTIO0, PGSIZE, VIRTIO0, PTE_R | PTE_W) != 0)
+      panic("mapeach");
+
+  // CLINT
+  if(mappages(kernel_pagetable, CLINT, 0x10000, CLINT, PTE_R | PTE_W) != 0)
+      panic("mapeach");
+  // PLIC
+  if(mappages(kernel_pagetable, PLIC, 0x400000, PLIC, PTE_R | PTE_W) != 0)
+      panic("mapeach");
+
+  uint64 etext = getetext();
+  // map kernel text executable and read-only.
+  if(mappages(kernel_pagetable, KERNBASE, etext-KERNBASE, KERNBASE, PTE_R | PTE_X) != 0)
+      panic("mapeach");
+  // map kernel data and the physical RAM we'll make use of.
+  if(mappages(kernel_pagetable, etext, PHYSTOP-etext, etext, PTE_R | PTE_W) != 0)
+      panic("mapeach");
+  // map the trampoline for trap entry/exit to
+  // the highest virtual address in the kernel.
+  if(mappages(kernel_pagetable, TRAMPOLINE, PGSIZE, (uint64)trampoline, PTE_R | PTE_X) != 0)
+      panic("mapeach");
+
+    vmprint(kernel_pagetable);
+  return kernel_pagetable;
+}
+
+
 // Look in the process table for an UNUSED proc.
 // If found, initialize state required to run in the kernel,
 // and return with p->lock held.
@@ -121,6 +159,18 @@ found:
     return 0;
   }
 
+  p->kerneltable = kvminiteach();
+
+  // Allocate a page for the process's kernel stack.
+      // Map it high in memory, followed by an invalid
+      // guard page.
+      char *pa = kalloc();
+      if(pa == 0)
+        panic("kalloc");
+      uint64 va = KSTACK((int) (0)); // assume it to be highest kernel page
+      kvmmap(va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
+      p->kstack = va;
+
   // Set up new context to start executing at forkret,
   // which returns to user space.
   memset(&p->context, 0, sizeof(p->context));
@@ -128,6 +178,25 @@ found:
   p->context.sp = p->kstack + PGSIZE;
 
   return p;
+}
+
+void 
+freekernelpage(pagetable_t pagetable)
+{
+  // there are 2^9 = 512 PTEs in a page table.
+  for(int i = 0; i < 512; i++){
+    pte_t pte = pagetable[i];
+    if((pte & PTE_V) && (pte & (PTE_R|PTE_W|PTE_X)) == 0){
+      // this PTE points to a lower-level page table.
+      uint64 child = PTE2PA(pte);
+      freekernelpage((pagetable_t)child);
+      pagetable[i] = 0; // free this pte
+    } else if(pte & PTE_V){
+      // panic("freewalk: leaf");
+      return;
+    }
+  }
+  kfree((void*)pagetable);
 }
 
 // free a proc structure and the data hanging from it,
@@ -150,6 +219,11 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
+
+  // free kernel page
+  if (p->kerneltable)
+    freekernelpage(p->kerneltable);
+  
 }
 
 // Create a user page table for a given process,
@@ -473,6 +547,11 @@ scheduler(void)
         // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
+
+        // load kernel page table
+        w_satp(MAKE_SATP(p->kerneltable));
+        sfence_vma();
+
         swtch(&c->context, &p->context);
 
         // Process is done running for now.
@@ -482,6 +561,10 @@ scheduler(void)
         found = 1;
       }
       release(&p->lock);
+    }
+
+    if (found == 0) {
+      kvminithart();
     }
 #if !defined (LAB_FS)
     if(found == 0) {
