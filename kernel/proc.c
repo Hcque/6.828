@@ -118,7 +118,7 @@ kvminiteach()
   if(mappages(kernel_pagetable, TRAMPOLINE, PGSIZE, (uint64)trampoline, PTE_R | PTE_X) != 0)
       panic("mapeach");
 
-    vmprint(kernel_pagetable);
+    // vmprint(kernel_pagetable);
   return kernel_pagetable;
 }
 
@@ -159,7 +159,13 @@ found:
     return 0;
   }
 
+  // init kernel page
   p->kerneltable = kvminiteach();
+  if(p->kerneltable == 0){
+    freeproc(p);
+    release(&p->lock);
+    return 0;
+  }
 
   // Allocate a page for the process's kernel stack.
       // Map it high in memory, followed by an invalid
@@ -167,7 +173,7 @@ found:
       char *pa = kalloc();
       if(pa == 0)
         panic("kalloc");
-      uint64 va = KSTACK((int) (0)); // assume it to be highest kernel page
+      uint64 va = KSTACK((int) (p - proc)); // assume it to be highest kernel page
       kvmmap(va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
       p->kstack = va;
 
