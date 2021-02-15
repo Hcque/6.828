@@ -31,8 +31,9 @@ void
 kinit()
 {
   for (int id = 0; id < NCPU; id++){
-    char name[6] = "kmem \0";
-    name[5] = id;
+    char name[6] = "kmem 0";
+    name[4] = id + '0';
+    // printf("%s\n", 1+id);
     initlock(&kmem.lock[id], name);
     freerange(end + chunk*id, end + chunk*(id+1) - 1);
   }
@@ -74,6 +75,27 @@ kfree(void *pa)
   release(&kmem.lock[cpuid]);
 }
 
+
+void 
+stealfreelist(int id, int cpuid)
+{
+   struct run *tmp = kmem.freelist[id];
+    struct run *cur = kmem.freelist[id];
+    int len = 0;
+    while (cur->next && len < move){
+        cur = cur->next;
+        len++;
+        if (cur == 0) panic ("cur is zero");
+        if (cur->next == 0) panic ("next is zero");
+    }
+    
+    kmem.freelist[id] = cur->next;
+    cur = 0;
+    kmem.freelist[cpuid] = tmp;
+
+    release(&kmem.lock[id]);
+
+}
 // Allocate one 4096-byte page of physical memory.
 // Returns a pointer that the kernel can use.
 // Returns 0 if the memory cannot be allocated.
@@ -94,36 +116,19 @@ kalloc(void)
   // needs other cpu's freelist
   else {
     // find the cpu who has freelist to steal
-    for (int j = 0; j < NCPU; j++){
+    for (int j = 1; j < NCPU; j++){
       id = (cpuid + j) % NCPU;
       acquire(&kmem.lock[id]);
-      if (! kmem.freelist[id]) 
-        goto found;
+      if (! kmem.freelist[id]){ 
+        // goto found;
+        stealfreelist(id, cpuid);
+        break;
+      }
       release(&kmem.lock[id]);
     }
 
   }
-  goto end;
 
-  found:
-    struct run *tmp = kmem.freelist[id];
-    struct run *cur = kmem.freelist[id];
-    int len = 0;
-    while (cur->next && len < move){
-        cur = cur->next;
-        len++;
-    }
-    
-    kmem.freelist[id] = cur->next;
-    cur = 0;
-    kmem.freelist[cpuid] = tmp;
-
-    release(&kmem.lock[id]);
-    goto end;
-
-  
-
-  end:
   release(&kmem.lock[cpuid]);
 
   if(r)
