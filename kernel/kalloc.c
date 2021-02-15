@@ -105,19 +105,11 @@ kalloc(void)
   }
   goto end;
 
-  end:
-  release(&kmem.lock[cpuid]);
-
-  if(r)
-    memset((char*)r, 5, PGSIZE); // fill with junk
-  return (void*)r;
-
-
   found:
-    void *tmp = kmem.freelist[id];
+    struct run *tmp = kmem.freelist[id];
     struct run *cur = kmem.freelist[id];
     int len = 0;
-    while (cur->next && len <= move){
+    while (cur->next && len < move){
         cur = cur->next;
         len++;
     }
@@ -128,6 +120,18 @@ kalloc(void)
 
     release(&kmem.lock[id]);
     goto end;
+
+  
+
+  end:
+  release(&kmem.lock[cpuid]);
+
+  if(r)
+    memset((char*)r, 5, PGSIZE); // fill with junk
+  return (void*)r;
+
+
+
 
 
 
