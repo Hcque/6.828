@@ -112,7 +112,7 @@ sys_sigalarm(void)
   if (argint(0, &n) < 0) 
     return -1;
   
-  p->handler = (void())(*handler);
+  p->handler = (void(*)())(handler);
   p->interval = n;
 
   return 0;

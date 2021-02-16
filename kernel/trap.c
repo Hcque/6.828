@@ -82,9 +82,10 @@ usertrap(void)
     yield();
   }
   // test timepassed
-  if (p->tickpassed == p->interval) 
-    p->handler();
-  p->tickpassed = 0;
+  if (p->tickpassed == p->interval){ 
+    p->tickpassed = 0;
+    p->handler (); 
+  }
 
   usertrapret();
 }
