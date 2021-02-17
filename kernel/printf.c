@@ -139,7 +139,7 @@ backtrace()
 {
   uint64 fp = r_fp();
   uint64 top = PGROUNDUP(fp);
-  uint64 bottom = PGROUNDDOWN(fp);
+  uint64 bottom = PGROUNDDOWN(fp);  
   do {
     uint64 ra = *(uint64*)((char*)fp-8);
     fp = *(uint64*)((char*)fp-16);
