@@ -77,11 +77,53 @@ usertrap(void)
     exit(-1);
 
   // give up the CPU if this is a timer interrupt.
-  if(which_dev == 2){
+  if(which_dev == 2 && p->alarm == 1){
     p->passed += 1;
-    if (p->passed == p->interval){
+
+    // printf("passed: %d\n", p->passed);
+    if (p->passed == p->interval && p->inhandle == 0){
+
       p->passed = 0;
-      p->handler (); // call handler;
+      p->inhandle = 1;
+      p->pastepc = p->trapframe->epc;
+
+      // all other past registers
+      p->pastra = p->trapframe->ra;
+      p->pastsp = p->trapframe->sp;
+      p->pastgp = p->trapframe->gp;
+      p->pasttp = p->trapframe->tp;
+      p->pasta0 = p->trapframe->a0;
+      p->pasta1 = p->trapframe->a1;
+      p->pasta2 = p->trapframe->a2;
+      p->pasta3 = p->trapframe->a3;
+      p->pasta4 = p->trapframe->a4;
+      p->pasta5 = p->trapframe->a5;
+      p->pasta6 = p->trapframe->a6;
+      p->pasta7 = p->trapframe->a7;
+      p->pastt0 = p->trapframe->t0;
+      p->pastt1 = p->trapframe->t1;
+      p->pastt0 = p->trapframe->t2;
+      p->pastt0 = p->trapframe->t3;
+      p->pastt0 = p->trapframe->t4;
+      p->pastt0 = p->trapframe->t5;
+      p->pastt0 = p->trapframe->t6;
+
+      p->pasts0 = p->trapframe->s0;
+      p->pasts1 = p->trapframe->s1;
+      p->pasts2 = p->trapframe->s2;
+      p->pasts3 = p->trapframe->s3;
+      p->pasts4 = p->trapframe->s4;
+      p->pasts5 = p->trapframe->s5;
+      p->pasts6 = p->trapframe->s6;
+      p->pasts7 = p->trapframe->s7;
+      p->pasts8 = p->trapframe->s8;
+      p->pasts9 = p->trapframe->s9;
+      p->pasts10 = p->trapframe->s10;
+      p->pasts11 = p->trapframe->s11;
+
+      // call handler by passed to epc;
+      p->trapframe->epc = (uint64)p->handler;
+
     }
     yield();
   }

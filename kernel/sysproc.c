@@ -99,18 +99,29 @@ sys_uptime(void)
 }
 
 uint64
+sys_sigreturn(void);
+
+uint64
 sys_sigalarm(void)
 {
   uint64 handler;
   int ticks;
+  struct proc *p = myproc();
 
   if (argint(0, &ticks) < 0)
     return -1;
   if (argaddr(1, &handler) < 0)
     return -1;
 
-  myproc()->interval = ticks;
-  myproc()->handler = (void(*)(void))handler;
+  if (ticks == 0 && handler == 0){
+    p->alarm = 0;
+  } else {
+    p->alarm = 1;
+  }
+
+  p->interval = ticks;
+  p->handler = (void(*)(void))handler;
+  p->inhandle = 0;
   return 0;
 
 }
@@ -118,5 +129,43 @@ sys_sigalarm(void)
 uint64
 sys_sigreturn(void)
 {
+  struct proc *p = myproc();
+
+  p->trapframe->epc = p->pastepc;
+
+  p->trapframe->ra = p->pastra;
+       p->trapframe->sp = p->pastsp;
+       p->trapframe->gp = p->pastgp;
+       p->trapframe->tp = p->pasttp;
+       p->trapframe->a0 = p->pasta0;
+      p->trapframe->a1 = p->pasta1;
+     p->trapframe->a2 = p->pasta2;
+    p->trapframe->a3 = p->pasta3;
+       p->trapframe->a4 = p->pasta4;
+       p->trapframe->a5 = p->pasta5;
+       p->trapframe->a6 = p->pasta6;
+       p->trapframe->a7 = p->pasta7;
+       p->trapframe->t0 = p->pastt0;
+       p->trapframe->t1 = p->pastt1;
+       p->trapframe->t2 = p->pastt2;
+       p->trapframe->t3 = p->pastt3;
+       p->trapframe->t4 = p->pastt4;
+       p->trapframe->t5 = p->pastt5;
+       p->trapframe->t6 = p->pastt6;
+
+  p->trapframe->s0 = p->pasts0;
+  p->trapframe->s1 = p->pasts1;
+  p->trapframe->s2 = p->pasts2;
+  p->trapframe->s3 = p->pasts3;
+  p->trapframe->s4 = p->pasts4;
+  p->trapframe->s5 = p->pasts5;
+  p->trapframe->s6 = p->pasts6;
+  p->trapframe->s7 = p->pasts7;
+  p->trapframe->s8 = p->pasts8;
+  p->trapframe->s9 = p->pasts9;
+  p->trapframe->s10 = p->pasts10;
+  p->trapframe->s11 = p->pasts11;
+
+  p->inhandle = 0;
   return 0;
 }

@@ -106,4 +106,41 @@ struct proc {
   int interval;               // Process name (debugging)
   void (*handler)(void) ;               // Process name (debugging)
   int passed;               // Process name (debugging)
+  int inhandle;               // Process name (debugging)
+  int alarm;               // Process name (debugging)
+  uint64 pastepc;               // Process name (debugging)
+
+  uint64 pastra;
+  uint64 pastsp;
+  uint64 pastgp;
+  uint64 pasttp;
+  uint64 pastt0;
+  uint64 pastt1;
+  uint64 pastt2;
+  uint64 pastt3;
+  uint64 pastt4;
+  uint64 pastt5;
+  uint64 pastt6;
+
+  uint64 pasts0;
+  uint64 pasts1;
+  uint64 pasts2;
+  uint64 pasts3;
+  uint64 pasts4;
+  uint64 pasts5;
+  uint64 pasts6;
+  uint64 pasts7;
+  uint64 pasts8;
+  uint64 pasts9;
+  uint64 pasts10;
+  uint64 pasts11;
+
+  uint64 pasta0;
+  uint64 pasta1;
+  uint64 pasta2;
+  uint64 pasta3;
+  uint64 pasta4;
+  uint64 pasta5;
+  uint64 pasta6;
+  uint64 pasta7;
 };
