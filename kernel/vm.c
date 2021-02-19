@@ -412,24 +412,24 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 int
 copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 {
-  return copyin_new(pagetable, dst, srcva, len);
-  // uint64 n, va0, pa0;
+  // return copyin_new(pagetable, dst, srcva, len);
+  uint64 n, va0, pa0;
 
-  // while(len > 0){
-  //   va0 = PGROUNDDOWN(srcva);
-  //   pa0 = walkaddr(pagetable, va0);
-  //   if(pa0 == 0)
-  //     return -1;
-  //   n = PGSIZE - (srcva - va0);
-  //   if(n > len)
-  //     n = len;
-  //   memmove(dst, (void *)(pa0 + (srcva - va0)), n);
+  while(len > 0){
+    va0 = PGROUNDDOWN(srcva);
+    pa0 = walkaddr(pagetable, va0);
+    if(pa0 == 0)
+      return -1;
+    n = PGSIZE - (srcva - va0);
+    if(n > len)
+      n = len;
+    memmove(dst, (void *)(pa0 + (srcva - va0)), n);
 
-  //   len -= n;
-  //   dst += n;
-  //   srcva = va0 + PGSIZE;
-  // }
-  // return 0;
+    len -= n;
+    dst += n;
+    srcva = va0 + PGSIZE;
+  }
+  return 0;
 }
 
 // Copy a null-terminated string from user to kernel.
@@ -477,7 +477,7 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
 
 
 // copy usrmap to kernel table
-void 
+int 
 copyusertokernel(pagetable_t usertable, pagetable_t kerneltable)
 {
 

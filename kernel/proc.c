@@ -301,10 +301,12 @@ userinit(void)
   uvminit(p->pagetable, initcode, sizeof(initcode));
   p->sz = PGSIZE;
 
+  vmprint(p->pagetable);
+
   // for lab 3 copy tabe
-  if(copyusertokernel(p->pagetable, p->kerneltable) < 0){
-    panic ("copy userinit");
-  }
+  // if(copyusertokernel(p->pagetable, p->kerneltable) < 0){
+  //   panic ("copy userinit");
+  // }
 
   // prepare for the very first "return" from kernel to user.
   p->trapframe->epc = 0;      // user program counter
@@ -571,6 +573,8 @@ scheduler(void)
 
         swtch(&c->context, &p->context);
 
+          w_satp(MAKE_SATP(p->kerneltable));
+        sfence_vma();
         // Process is done running for now.
         // It should have changed its p->state before coming back.
         c->proc = 0;

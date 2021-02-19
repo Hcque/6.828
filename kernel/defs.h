@@ -159,6 +159,7 @@ int             uartgetc(void);
 
 int             copyin_new(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len);
 // vm.c
+int             copyusertokernel(pagetable_t , pagetable_t );
 uint64          getetext(void);
 void            vmprint(pagetable_t pagetable);
 void            kvminit(void);
