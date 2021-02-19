@@ -116,6 +116,12 @@ exec(char *path, char **argv)
   p->trapframe->sp = sp; // initial stack pointer
   proc_freepagetable(oldpagetable, oldsz);
 
+  // for lab3
+  // copy to kernel table
+  if(copyusertokernel(p->pagetable, p->kerneltable) < 0){
+    panic("copy failed exec");
+  }
+
   // for lab 3
   if (p->pid == 1)
     vmprint(p->pagetable);

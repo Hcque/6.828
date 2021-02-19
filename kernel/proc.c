@@ -301,6 +301,11 @@ userinit(void)
   uvminit(p->pagetable, initcode, sizeof(initcode));
   p->sz = PGSIZE;
 
+  // for lab 3 copy tabe
+  if(copyusertokernel(p->pagetable, p->kerneltable) < 0){
+    panic ("copy userinit");
+  }
+
   // prepare for the very first "return" from kernel to user.
   p->trapframe->epc = 0;      // user program counter
   p->trapframe->sp = PGSIZE;  // user stack pointer
@@ -353,6 +358,16 @@ fork(void)
     release(&np->lock);
     return -1;
   }
+
+  // for lab 3
+  // user table to kernel
+    if(copyusertokernel(np->pagetable, np->kerneltable) < 0){
+    freeproc(np);
+    release(&np->lock);
+    return -1;
+  }
+
+
   np->sz = p->sz;
 
   np->parent = p;
@@ -554,10 +569,6 @@ scheduler(void)
         p->state = RUNNING;
         c->proc = p;
 
-        // load kernel page table
-        w_satp(MAKE_SATP(p->kerneltable));
-        sfence_vma();
-
         swtch(&c->context, &p->context);
 
         // Process is done running for now.
@@ -571,6 +582,10 @@ scheduler(void)
 
     if (found == 0) {
       kvminithart();
+    } else{
+              // load kernel page table
+        w_satp(MAKE_SATP(p->kerneltable));
+        sfence_vma();
     }
 #if !defined (LAB_FS)
     if(found == 0) {

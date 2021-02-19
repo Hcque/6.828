@@ -474,3 +474,30 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
     return -1;
   }
 }
+
+
+// copy usrmap to kernel table
+void 
+copyusertokernel(pagetable_t usertable, pagetable_t kerneltable)
+{
+
+  uint64 pa;
+  for (uint64 va = 0; va < MAXVA; va += PGSIZE){
+
+    if (va > PLIC) {
+      panic("copy userkernel max va");
+      // break;
+    }    
+    pa = walkaddr(usertable, va);
+    if (pa == 0)
+      panic("copy false user phyaddr");
+
+    if(mappages(kerneltable, va, PGSIZE, pa, PTE_W|PTE_X|PTE_R|PTE_U) != 0){
+      panic("copy user kernel");
+    }
+
+  }
+
+  return 0;
+
+} 
