@@ -571,10 +571,11 @@ scheduler(void)
         p->state = RUNNING;
         c->proc = p;
 
+        w_satp(MAKE_SATP(p->kerneltable));
+        sfence_vma();
         swtch(&c->context, &p->context);
 
-          w_satp(MAKE_SATP(p->kerneltable));
-        sfence_vma();
+        kvminithart();
         // Process is done running for now.
         // It should have changed its p->state before coming back.
         c->proc = 0;
@@ -584,13 +585,7 @@ scheduler(void)
       release(&p->lock);
     }
 
-    if (found == 0) {
-      kvminithart();
-    } else{
-              // load kernel page table
-        w_satp(MAKE_SATP(p->kerneltable));
-        sfence_vma();
-    }
+
 #if !defined (LAB_FS)
     if(found == 0) {
       intr_on();
