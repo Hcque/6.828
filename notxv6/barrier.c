@@ -30,6 +30,10 @@ barrier()
   // Block until all threads have called barrier() and
   // then increment bstate.round.
   //
+  pthread_cond_wait(&bstate.barrier_cond, &bstate.barrier_mutex);
+  bstate.round++;
+  if (bstate.round == nthread)
+    pthread_cond_broadcast(&bstate.barrier_cond);
   
 }
 
