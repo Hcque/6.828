@@ -30,10 +30,23 @@ barrier()
   // Block until all threads have called barrier() and
   // then increment bstate.round.
   //
-  pthread_cond_wait(&bstate.barrier_cond, &bstate.barrier_mutex);
-  bstate.round++;
-  if (bstate.round == nthread)
+  pthread_mutex_lock(&bstate.barrier_mutex);
+  bstate.nthread++;
+  // printf("%d thread coll\n", bstate.nthread);
+
+  if (bstate.nthread == nthread){
+    bstate.round++;
+    bstate.nthread = 0; // for next round
+  // printf("%d round\n", bstate.round);
+
+    pthread_mutex_unlock(&bstate.barrier_mutex);
     pthread_cond_broadcast(&bstate.barrier_cond);
+  // printf("after borad\n");
+  }else{
+
+  pthread_cond_wait(&bstate.barrier_cond, &bstate.barrier_mutex);
+  pthread_mutex_unlock(&bstate.barrier_mutex);
+  }
   
 }
 

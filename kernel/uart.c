@@ -173,12 +173,43 @@ uartgetc(void)
   }
 }
 
+static int tx_done;
+static int tx_chan;
+
+
+void
+uartwrite(char buf[], int n)
+{
+  acquire(&uart_tx_lock);
+  int i = 0;
+  while(i < n){
+    while(tx_done == 0){
+      // release(&uart_tx_lock);
+      // broken_sleep(&tx_chan);
+      // acquire(&uart_tx_lock);
+      sleep(&tx_chan, &uart_tx_lock);
+    }
+    WriteReg(THR, buf[i]);
+    i += 1;
+    tx_done = 0;
+  }
+  release(&uart_tx_lock);
+}
+
+
 // handle a uart interrupt, raised because input has
 // arrived, or the uart is ready for more output, or
 // both. called from trap.c.
 void
 uartintr(void)
 {
+    //   acquire(&uart_tx_lock);
+    // if (ReadReg(LSR) & LSR_TX_IDLE) {
+    //     // see mmap regs , it is finished transmitting
+    //     tx_done = 1;
+    //     wakeup(&tx_chan);
+    // }
+    // release(&uart_tx_lock);
   // read and process incoming characters.
   while(1){
     int c = uartgetc();
@@ -187,7 +218,7 @@ uartintr(void)
     consoleintr(c);
   }
 
-  // send buffered characters.
+  // // send buffered characters.
   acquire(&uart_tx_lock);
   uartstart();
   release(&uart_tx_lock);

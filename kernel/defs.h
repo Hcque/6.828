@@ -97,6 +97,7 @@ void            scheduler(void) __attribute__((noreturn));
 void            sched(void);
 void            setproc(struct proc*);
 void            sleep(void*, struct spinlock*);
+void            broken_sleep(void*);
 void            userinit(void);
 int             wait(uint64);
 void            wakeup(void*);

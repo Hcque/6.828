@@ -50,6 +50,7 @@ void put(int key, int value)
 
   // is the key already present?
   struct entry *e = 0;
+    // pthread_mutex_lock(&e->lock);
   for (e = table[i]; e != 0; e = e->next) {
 
     pthread_mutex_lock(&e->lock);
@@ -66,6 +67,7 @@ void put(int key, int value)
   pthread_mutex_lock(&insertLocks[i]);
   insert(key, value, &table[i], table[i]);
   pthread_mutex_unlock(&insertLocks[i]);
+    // pthread_mutex_unlock(&e->lock);
 
 }
 
