@@ -14,9 +14,9 @@ void freerange(void *pa_start, void *pa_end);
 extern char end[]; // first address after kernel.
                    // defined by kernel.ld.
 
-#define chunk ((PHYSTOP - (uint64)end) / NCPU)
+#define chunk ((PHYSTOP - 1 - (uint64)end) / NCPU)
 
-const int move = 32; // #of pages move to other cpu
+const int move = 1; // #of pages move to other cpu
 
 struct run {
   struct run *next;
@@ -27,16 +27,24 @@ struct {
   struct run *freelist[NCPU]; // each cpu has its free list
 } kmem;
 
+// struct {
+//   struct spinlock lock;
+//   struct run *freelist; // each cpu has its free list
+// } kmem;
+
 void
 kinit()
 {
   for (int id = 0; id < NCPU; id++){
     char name[6] = "kmem 0";
-    name[4] = id + '0';
+    // name[4] = id + '0';
     // printf("%s\n", 1+id);
     initlock(&kmem.lock[id], name);
     freerange(end + chunk*id, end + chunk*(id+1) - 1);
   }
+    //   initlock(&kmem.lock, "kmem");
+    // freerange(end , (void*)PHYSTOP);
+
 }
 
 void
@@ -68,7 +76,16 @@ kfree(void *pa)
   memset(pa, 1, PGSIZE);
 
   r = (struct run*)pa;
+  if ((uint64)r > PHYSTOP - 10000) {
+    printf("%d cpu free %p\n", cpuid, r);
+  }
 
+  //   acquire(&kmem.lock);
+  // r->next = kmem.freelist;
+  // kmem.freelist = r;
+  // release(&kmem.lock);
+
+// is it your cpu ?
   acquire(&kmem.lock[cpuid]);
   r->next = kmem.freelist[cpuid];
   kmem.freelist[cpuid] = r;
@@ -82,11 +99,13 @@ stealfreelist(int id, int cpuid)
    struct run *tmp = kmem.freelist[id];
     struct run *cur = kmem.freelist[id];
     int len = 0;
+    if (cur->next == 0) panic("cur->next");
     while (cur->next && len < move){
+      printf("len: %d\n", len);
         cur = cur->next;
         len++;
         if (cur == 0) panic ("cur is zero");
-        if (cur->next == 0) panic ("next is zero");
+        // if (cur->next == 0) panic ("next is zero");
     }
     
     kmem.freelist[id] = cur->next;
@@ -102,34 +121,38 @@ stealfreelist(int id, int cpuid)
 void *
 kalloc(void)
 {
-  push_off();
-  int cpuid = r_tp();
-  pop_off();
+//   push_off();
+//   int cpuid = r_tp();
+//   pop_off();
+//  int id;
 
   struct run *r;
-  int id;
 
-  acquire(&kmem.lock[cpuid]);
-  r = kmem.freelist[cpuid];
+  acquire(&kmem.lock);
+  // acquire(&kmem.lock[cpuid]);
+  // r = kmem.freelist[cpuid];
+  r = kmem.freelist;
   if(r)
-    kmem.freelist[cpuid] = r->next;
+    // kmem.freelist[cpuid] = r->next;
+    kmem.freelist = r->next;
   // needs other cpu's freelist
-  else {
-    // find the cpu who has freelist to steal
-    for (int j = 1; j < NCPU; j++){
-      id = (cpuid + j) % NCPU;
-      acquire(&kmem.lock[id]);
-      if (! kmem.freelist[id]){ 
-        // goto found;
-        stealfreelist(id, cpuid);
-        break;
-      }
-      release(&kmem.lock[id]);
-    }
+  // else {
+  //   // find the cpu who has freelist to steal
+  //   for (int j = 1; j < NCPU; j++){
+  //     id = (cpuid + j) % NCPU;
+  //     acquire(&kmem.lock[id]);
+  //     if (! kmem.freelist[id]){ 
+  //       // goto found;
+  //       stealfreelist(id, cpuid);
+  //       break;
+  //     }
+  //     release(&kmem.lock[id]);
+  //   }
 
-  }
+  // }
 
-  release(&kmem.lock[cpuid]);
+  release(&kmem.lock);
+  // release(&kmem.lock[cpuid]);
 
   if(r)
     memset((char*)r, 5, PGSIZE); // fill with junk
