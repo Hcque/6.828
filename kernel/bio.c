@@ -48,6 +48,7 @@ binit(void)
   }
 
   for(b = bcache.buf; b < bcache.buf+NBUF; b++){
+    printf("blno: %d\n", b->blockno);
     int hvalue = b->blockno % SIZE;
     b->next = bcache.head[hvalue].next;
     b->prev = &bcache.head[hvalue];
@@ -96,8 +97,9 @@ bget(uint dev, uint blockno)
 
   // for(b = bcache.head.prev; b != &bcache.head; b = b->prev){
     b = min;
-    printf("ref:%d\n", b->refcnt);
+    // printf("ref:%d\n", b->refcnt);
     if(b->refcnt == 0) {
+      printf("min\n");
       b->dev = dev;
       b->blockno = blockno;
       b->valid = 0;
@@ -109,39 +111,44 @@ bget(uint dev, uint blockno)
 
   // acquire(&bcache.)
   // find in other hash buckets
-  for (int i = 0 ; i < SIZE; i++){
-    if (i != hvalue){
+    for (int i = hvalue+1; i != hvalue; i= (i+1)%SIZE)
+    {
+      if (i != hvalue)
+      {
 
-    acquire(&bcache.lock[i]);
-    struct buf *hea = &bcache.head[i];
-    for (b = hea->next; b != hea; b = b->next){
-      if (b->refcnt == 0){
-        b->dev = dev;
-      b->blockno = blockno;
-      b->valid = 0;
-      b->refcnt = 1;
+        acquire(&bcache.lock[i]);
+        printf("steal\n");
+        struct buf *hea = &bcache.head[i];
+        for (b = hea->next; b != hea; b = b->next)
+        {
+          printf("buf:%p\n", b);
+          if (b->refcnt == 0)
+          {
+            b->dev = dev;
+            b->blockno = blockno;
+            b->valid = 0;
+            b->refcnt = 1;
 
-      b->prev->next = b->next;
-      b->next->prev = b->prev;
-      release(&bcache.lock[i]);
+            b->prev->next = b->next;
+            b->next->prev = b->prev;
+            release(&bcache.lock[i]);
 
-      b->prev = &bcache.head[hvalue];
-      b->next = bcache.head[hvalue].next;
-      bcache.head[hvalue].next->prev = b;
-      bcache.head[hvalue].next = b;
+            bcache.head[hvalue].next->prev = b;
+            bcache.head[hvalue].next = b;
+            b->prev = &bcache.head[hvalue];
+            b->next = bcache.head[hvalue].next;
 
-      release(&bcache.lock[hvalue]);
-      acquiresleep(&b->lock);
-      return b;
+            release(&bcache.lock[hvalue]);
+            acquiresleep(&b->lock);
+            printf("return\n");
+            return b;
+          }
+        }
+        release(&bcache.lock[i]);
 
       }
     }
-    release(&bcache.lock[i]);
 
-    }
-  }
-
-  
   panic("bget: no buffers");
 }
 
@@ -181,15 +188,17 @@ brelse(struct buf *b)
   // acquire(&bcache.lock);
   acquire(&bcache.lock[ b->blockno%SIZE ]);
   b->refcnt--;
+
+  // int h = b->blockno%SIZE;
   if (b->refcnt == 0) {
     b->ticks = ticks;
     // no one is waiting for it.
     // b->next->prev = b->prev;
     // b->prev->next = b->next;
-    // b->next = bcache.head.next;
-    // b->prev = &bcache.head;
-    // bcache.head.next->prev = b;
-    // bcache.head.next = b;
+    // b->next = bcache.head[h].next;
+    // b->prev = &bcache.head[h];
+    // bcache.head[h].next->prev = b;
+    // bcache.head[h].next = b;
   }
   release(&bcache.lock[ b->blockno%SIZE ]);
 }
