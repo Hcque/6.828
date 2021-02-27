@@ -75,7 +75,8 @@ bget(uint dev, uint blockno)
 
   // Is the block already cached?
   for(b = bcache.head[hvalue].next; b != &bcache.head[hvalue]; b = b->next){
-    if(b->ticks < min->ticks){
+    // printf("refcnt:%d\n",b->refcnt);
+    if(b->ticks < min->ticks && b->refcnt == 0){
       min = b;
     }
 
@@ -95,6 +96,7 @@ bget(uint dev, uint blockno)
 
   // for(b = bcache.head.prev; b != &bcache.head; b = b->prev){
     b = min;
+    printf("ref:%d\n", b->refcnt);
     if(b->refcnt == 0) {
       b->dev = dev;
       b->blockno = blockno;
@@ -104,7 +106,42 @@ bget(uint dev, uint blockno)
       acquiresleep(&b->lock);
       return b;
     }
-  // }
+
+  // acquire(&bcache.)
+  // find in other hash buckets
+  for (int i = 0 ; i < SIZE; i++){
+    if (i != hvalue){
+
+    acquire(&bcache.lock[i]);
+    struct buf *hea = &bcache.head[i];
+    for (b = hea->next; b != hea; b = b->next){
+      if (b->refcnt == 0){
+        b->dev = dev;
+      b->blockno = blockno;
+      b->valid = 0;
+      b->refcnt = 1;
+
+      b->prev->next = b->next;
+      b->next->prev = b->prev;
+      release(&bcache.lock[i]);
+
+      b->prev = &bcache.head[hvalue];
+      b->next = bcache.head[hvalue].next;
+      bcache.head[hvalue].next->prev = b;
+      bcache.head[hvalue].next = b;
+
+      release(&bcache.lock[hvalue]);
+      acquiresleep(&b->lock);
+      return b;
+
+      }
+    }
+    release(&bcache.lock[i]);
+
+    }
+  }
+
+  
   panic("bget: no buffers");
 }
 
