@@ -38,6 +38,15 @@ sys_wait(void)
   return wait(p);
 }
 
+
+// for lab soft link
+uint64
+sys_symlink(void)
+{
+  //TODO
+  return 0;
+}
+
 uint64
 sys_sbrk(void)
 {
