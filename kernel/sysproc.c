@@ -44,11 +44,10 @@ sys_wait(void)
 uint64
 sys_symlink(void)
 {
-  //TODO
   int maxstr = 128;
   char target[128], path[128];
   // struct inode *dp;
-    struct inode *ip;
+  struct inode *ip;
   if ( argstr(0, target, maxstr) < 0 || argstr(1, path, maxstr) < 0 ) 
     return -1;
   
@@ -67,12 +66,11 @@ sys_symlink(void)
     ilock(ip);
   }
   if ( writei(ip, 0, (uint64)target, 0, sizeof(target)) < 0){
+    iunlockput(ip);
     end_op();
     return -1;
   }
   iunlockput(ip);
-  // printf("link done\n");
-  
   end_op();
   return 0;
 }

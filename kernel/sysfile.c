@@ -339,7 +339,7 @@ sys_open(void)
     char buf[64];
     // ilock(ip);
     if(readi(ip, 0, (uint64)buf, 0, sizeof(buf)) != sizeof(buf)){
-      iunlock(ip);
+      iunlockput(ip);
       end_op();
       return -1; // can not call open
     }
