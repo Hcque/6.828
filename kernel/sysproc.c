@@ -6,6 +6,7 @@
 #include "memlayout.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "stat.h"
 
 uint64
 sys_exit(void)
@@ -44,6 +45,35 @@ uint64
 sys_symlink(void)
 {
   //TODO
+  int maxstr = 128;
+  char target[128], path[128];
+  // struct inode *dp;
+    struct inode *ip;
+  if ( argstr(0, target, maxstr) < 0 || argstr(1, path, maxstr) < 0 ) 
+    return -1;
+  
+  begin_op();
+  int creat = 0;
+  // printf("%s, %s\n", target, path);
+  if((ip = namei(path)) == 0){
+    // printf("not found path create\n");
+    if ((ip = create(path, T_SYMLINK, 0, 0)) == 0)
+      panic("create symlink");
+    creat = 1;
+  }
+
+  // assume target exists, no need to create target
+  if (!creat){
+    ilock(ip);
+  }
+  if ( writei(ip, 0, (uint64)target, 0, sizeof(target)) < 0){
+    end_op();
+    return -1;
+  }
+  iunlockput(ip);
+  // printf("link done\n");
+  
+  end_op();
   return 0;
 }
 

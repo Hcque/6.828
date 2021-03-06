@@ -81,6 +81,9 @@ void            printf(char*, ...);
 void            panic(char*) __attribute__((noreturn));
 void            printfinit(void);
 
+struct inode*
+create(char *path, short type, short major, short minor);
+
 // proc.c
 int             cpuid(void);
 void            exit(int);

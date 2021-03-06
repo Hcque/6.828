@@ -238,7 +238,7 @@ bad:
   return -1;
 }
 
-static struct inode*
+struct inode*
 create(char *path, short type, short major, short minor)
 {
   struct inode *ip, *dp;
@@ -283,6 +283,16 @@ create(char *path, short type, short major, short minor)
   return ip;
 }
 
+// static int 
+// checkname(char* path, char** pathnames)
+// {
+//   for (int i = 0; i < 10; i++){
+//     if (strncmp(path, pathnames[i], 64) == 0)
+//       return -1;
+//   }
+//   return 0;
+// }
+
 uint64
 sys_open(void)
 {
@@ -314,6 +324,44 @@ sys_open(void)
       end_op();
       return -1;
     }
+  }
+
+  int count = 0;
+  // char *pathnames[10];
+  // deal with soft link
+  while ( (ip->type == T_SYMLINK) && ((omode & O_NOFOLLOW) == 0) ){
+    if (count > 10){
+      iunlockput(ip);
+      end_op();
+      return -1;
+    }
+
+    char buf[64];
+    // ilock(ip);
+    if(readi(ip, 0, (uint64)buf, 0, sizeof(buf)) != sizeof(buf)){
+      iunlock(ip);
+      end_op();
+      return -1; // can not call open
+    }
+    iunlockput(ip);
+    
+    // printf("content: %s\n", buf);
+
+    // test cycle
+    // if ( checkname(buf, pathnames) != 0){
+    //   iunlock(ip);
+    //   end_op();
+    //   return -1;
+    // }
+    // pathnames[count] = buf;
+
+    if ( (ip = namei(buf)) == 0){
+      // printf("not find %s\n", buf);
+      end_op();
+      return -1;
+    }
+    ilock(ip);
+    count++;
   }
 
   if(ip->type == T_DEVICE && (ip->major < 0 || ip->major >= NDEV)){
