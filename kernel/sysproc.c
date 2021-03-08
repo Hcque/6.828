@@ -95,3 +95,45 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+uint64
+sys_mmap(void)
+{
+  uint64 addr;
+  int length, fd, prot, flags, off;
+  if(argaddr(0, &addr) < 0 ||
+    argint(1, &length) || 
+    argint(2, &prot) || 
+    argint(3, &flags) || 
+    argint(4, &fd) || 
+    argint(5, &off)
+    ){
+    return -1;
+  }
+
+  pte_t *pte;
+  struct proc *proc = myproc();
+  uint64 va = PGROUNDUP(proc->trapframe->sp);
+  while (va++ < MAXVA){
+    if ( (pte = walk(proc->pagetable, va, 0)) == 0)
+      return -1;
+    if ((*pte & PTE_V) == 0)
+      break;
+  }
+
+  printf("va %p\n", va);
+  struct vma vma = {
+    (void*)addr, length, prot, flags, fd, off
+  };
+  proc->vmas[proc->idx++] = &vma;
+  struct file *f = proc->ofile[fd];
+  filedup(f);
+  
+  return 0;
+}
+
+uint64
+sys_munmap(void)
+{
+  return 0;
+}
