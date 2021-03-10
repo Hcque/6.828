@@ -8,6 +8,16 @@
 
 struct spinlock tickslock;
 uint ticks;
+struct file {
+  enum { FD_NONE, FD_PIPE, FD_INODE, FD_DEVICE } type;
+  int ref; // reference count
+  char readable;
+  char writable;
+  struct pipe *pipe; // FD_PIPE
+  struct inode *ip;  // FD_INODE and FD_DEVICE
+  uint off;          // FD_INODE
+  short major;       // FD_DEVICE
+};
 
 extern char trampoline[], uservec[], userret[];
 
@@ -67,8 +77,34 @@ usertrap(void)
     syscall();
   } else if((which_dev = devintr()) != 0){
 
-  } else if( r_scause() == 0xc || r_scause() == 0xe){
+  } else if( r_scause() == 0xd || r_scause() == 0xf){
+    // mmap page fault
+    uint64 va = r_stval();
+    struct proc *proc = myproc();
+    struct file *file = 0;
+    int mmap = 0;
+    for (int i = 0; i < proc->idx; i++){
+      uint64 ad = (uint64)proc->vmas[i]->addr;
+      int len = proc->vmas[i]->length;
+      if (ad <= va && ad + len >= va){
+        mmap = 1;
+        file = proc->vmas[i]->file;
+        break;
+      }
+    }
 
+    if (mmap){
+    uint64 p = (uint64)kalloc();
+    struct inode *ip = file->ip;
+    ilock(ip);
+    readi(ip, 0, p, 0, PGSIZE);
+    iunlock(ip);
+    printf("p:%p\n", p);
+    mappages(myproc()->pagetable, va, PGSIZE, p, PTE_V|PTE_R|PTE_W);
+    } else {
+    uint64 p = (uint64)kalloc();
+    mappages(myproc()->pagetable, va, PGSIZE, p, PTE_V|PTE_R|PTE_W);
+    }
 
   } else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);

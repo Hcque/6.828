@@ -250,9 +250,9 @@ growproc(int n)
 
   sz = p->sz;
   if(n > 0){
-    if((sz = uvmalloc(p->pagetable, sz, sz + n)) == 0) {
-      return -1;
-    }
+    // if((sz = uvmalloc(p->pagetable, sz, sz + n)) == 0) {
+    //   return -1;
+    // }
   } else if(n < 0){
     sz = uvmdealloc(p->pagetable, sz, sz + n);
   }
@@ -291,9 +291,13 @@ fork(void)
   np->trapframe->a0 = 0;
 
   // increment reference counts on open file descriptors.
-  for(i = 0; i < NOFILE; i++)
+  for(i = 0; i < NOFILE; i++){
+    // dup mmap
+
+
     if(p->ofile[i])
       np->ofile[i] = filedup(p->ofile[i]);
+  }
   np->cwd = idup(p->cwd);
 
   safestrcpy(np->name, p->name, sizeof(p->name));
@@ -346,6 +350,16 @@ exit(int status)
 
   // Close all open files.
   for(int fd = 0; fd < NOFILE; fd++){
+
+    // close all memory map
+    struct vma *vma = p->vmas[fd];
+    if (vma->fd){
+      // if (vma->dirty && vma->flags == MAP_SHARED ){
+      //   //write back
+      // }
+      uvmunmap(proc->pagetable, (uint64)vma->addr, 1, 1);
+    }
+
     if(p->ofile[fd]){
       struct file *f = p->ofile[fd];
       fileclose(f);

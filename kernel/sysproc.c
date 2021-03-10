@@ -6,6 +6,7 @@
 #include "memlayout.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "fcntl.h"
 
 uint64
 sys_exit(void)
@@ -114,19 +115,32 @@ sys_mmap(void)
   pte_t *pte;
   struct proc *proc = myproc();
   uint64 va = PGROUNDUP(proc->trapframe->sp);
-  while (va++ < MAXVA){
+  int count = 0;
+  uint64 startva = 0;
+  while (va < MAXVA){
+    // printf("%p %d\n",va, va);
     if ( (pte = walk(proc->pagetable, va, 0)) == 0)
       return -1;
-    if ((*pte & PTE_V) == 0)
+    if ((*pte & PTE_V) == 0){
+      if (count == 0){
+        startva = va;
+      }
+      count++;
+    }
+    if (count >= 4){
+      count = 0;
       break;
+    }
+    va += PGSIZE;
   }
 
+  struct file *f = proc->ofile[fd];
   printf("va %p\n", va);
   struct vma vma = {
-    (void*)addr, length, prot, flags, fd, off
+    (void*)startva, length, prot, flags, fd, off, f,
   };
+  addr = startva;
   proc->vmas[proc->idx++] = &vma;
-  struct file *f = proc->ofile[fd];
   filedup(f);
   
   return 0;
@@ -135,5 +149,22 @@ sys_mmap(void)
 uint64
 sys_munmap(void)
 {
+  uint64 addr;
+  int length;
+  if(argaddr(0, &addr) < 0 || argint(1, &length) ){
+    return -1;
+  }
+
+struct proc *proc = myproc();
+  for (int i = 0; i < 16; i++){
+    uint64 ad = (uint64)proc->vmas[i]->addr;
+    if (addr >= ad && addr <= ad + length){
+      struct vma *vma = proc->vmas[i];
+      if (vma->dirty && vma->flags == MAP_SHARED ){
+        //write back
+      }
+      uvmunmap(proc->pagetable, ad, 1, 1);
+    }
+  }
   return 0;
 }

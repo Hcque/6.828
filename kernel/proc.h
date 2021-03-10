@@ -90,6 +90,8 @@ struct vma{
   int flags;
   int fd;
   int off;
+  struct file *file;
+  int dirty;
 };
 
 struct vmas {
