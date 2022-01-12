@@ -10,6 +10,7 @@
 #include "defs.h"
 
 void freerange(void *pa_start, void *pa_end);
+void _kfree(void *pa, int _id); // _id is the cpuid
 
 extern char end[]; // first address after kernel.
                    // defined by kernel.ld.
@@ -21,13 +22,18 @@ struct run {
 struct {
   struct spinlock lock;
   struct run *freelist;
-} kmem;
+} kmem[NCPU];
 
 void
 kinit()
 {
-  initlock(&kmem.lock, "kmem");
+  printf("kinit\n");
+  for (int i = 0; i < NCPU ; i ++ )
+  {
+  initlock(&kmem[i].lock, "kmem" + ('A'+i));
+  }
   freerange(end, (void*)PHYSTOP);
+  printf("kinitDONE\n");
 }
 
 void
@@ -35,17 +41,21 @@ freerange(void *pa_start, void *pa_end)
 {
   char *p;
   p = (char*)PGROUNDUP((uint64)pa_start);
-  for(; p + PGSIZE <= (char*)pa_end; p += PGSIZE)
+  for(; p + PGSIZE <= (char*)pa_end; p += PGSIZE )
     kfree(p);
+  printf(" freerange DONE\n");
 }
+
 
 // Free the page of physical memory pointed at by v,
 // which normally should have been returned by a
 // call to kalloc().  (The exception is when
 // initializing the allocator; see kinit above.)
 void
-kfree(void *pa)
+kfree(void *pa) // _id is the cpuid
 {
+  push_off();
+  int _id = cpuid();
   struct run *r;
 
   if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP)
@@ -56,11 +66,13 @@ kfree(void *pa)
 
   r = (struct run*)pa;
 
-  acquire(&kmem.lock);
-  r->next = kmem.freelist;
-  kmem.freelist = r;
-  release(&kmem.lock);
+  acquire(&kmem[_id].lock);
+  r->next = kmem[_id].freelist;
+  kmem[_id].freelist = r;
+  release(&kmem[_id].lock);
+  pop_off();
 }
+
 
 // Allocate one 4096-byte page of physical memory.
 // Returns a pointer that the kernel can use.
@@ -68,15 +80,41 @@ kfree(void *pa)
 void *
 kalloc(void)
 {
+  push_off();
   struct run *r;
+  int _id = cpuid();
 
-  acquire(&kmem.lock);
-  r = kmem.freelist;
+  acquire(&kmem[_id].lock);
+  r = kmem[_id].freelist;
   if(r)
-    kmem.freelist = r->next;
-  release(&kmem.lock);
+    kmem[_id].freelist = r->next;
+
+  // steal from other cpu if possible =====
+  // int steal_ok = 0;
+  if (!r)
+  {
+    // printf("steal\n");
+    for (int nxtid = 0; nxtid < NCPU; nxtid ++ ) if (nxtid != _id)
+    {
+      acquire(&kmem[nxtid].lock);
+      r = kmem[nxtid].freelist;
+      if(r)
+      {
+        // steal_ok = 1;
+        kmem[nxtid].freelist = r->next;
+
+        release(&kmem[nxtid].lock);
+        break;
+      }
+      release(&kmem[nxtid].lock);
+
+    }
+  }
+   // ==================================
+  release(&kmem[_id].lock);
 
   if(r)
     memset((char*)r, 5, PGSIZE); // fill with junk
+  pop_off();
   return (void*)r;
 }
