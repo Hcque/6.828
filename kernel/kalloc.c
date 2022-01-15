@@ -30,7 +30,7 @@ kinit()
   printf("kinit\n");
   for (int i = 0; i < NCPU ; i ++ )
   {
-  initlock(&kmem[i].lock, "kmem" + ('A'+i));
+  initlock(&kmem[i].lock, "kmem" );
   }
   freerange(end, (void*)PHYSTOP);
   printf("kinitDONE\n");

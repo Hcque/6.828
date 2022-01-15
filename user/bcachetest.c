@@ -15,6 +15,7 @@ char buf[SZ];
 int
 main(int argc, char *argv[])
 {
+  printf("main");
   test0();
   test1();
   exit(0);
@@ -133,6 +134,7 @@ test0()
   }
   printf("test0 results:\n");
   n = ntas(1);
+  printf("n:%d m:%d\n", n,m);
   if (n-m < 500)
     printf("test0: OK\n");
   else
